@@ -1,0 +1,371 @@
+<!-- Nhẹ Spa — Khảo sát nỗi đau & mong muốn khách hàng (massage body, trị liệu)
+     Bố cục mô phỏng mẫu đã duyệt: badge 1 phút, 2 phần, 3 câu hỏi, nút xanh dương.
+     Dữ liệu lưu kho chung (window.storage, shared) — trang quản trị PIN 6868, xuất CSV. -->
+<style>
+  :root{
+    --bg:#eef1fb; --card:#ffffff; --ink:#1e2433; --muted:#6b7385;
+    --blue:#2b4acb; --blue-dark:#2340b4; --blue-soft:#eaf0fe;
+    --field:#eef3fd; --field-border:#dbe4fa; --danger:#e5484d;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body,.wrap{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:var(--ink)}
+  .wrap{background:var(--bg);min-height:100vh;padding:28px 14px 40px}
+  .inner{max-width:640px;margin:0 auto}
+
+  .badge{display:flex;justify-content:center;margin-bottom:16px}
+  .badge span{background:#e3e9fb;color:var(--blue);border:1px solid #c9d5f7;
+    font-size:13px;font-weight:600;padding:6px 16px;border-radius:999px}
+  h1.title{text-align:center;font-size:27px;line-height:1.25;font-weight:800;letter-spacing:-.3px}
+  h1.title em{font-style:normal;color:var(--blue)}
+  p.sub{text-align:center;color:var(--muted);font-size:15px;line-height:1.55;
+    max-width:520px;margin:10px auto 22px}
+
+  .card{background:var(--card);border-radius:20px;padding:26px 22px 24px;
+    box-shadow:0 10px 30px rgba(43,74,203,.08)}
+  .sec{color:var(--blue);font-size:12.5px;font-weight:800;letter-spacing:.6px;
+    text-transform:uppercase;margin:6px 0 14px}
+  .sec + .sec{margin-top:0}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .fgroup{margin-bottom:16px;flex:1;min-width:200px}
+  label.q{display:block;font-weight:700;font-size:15px;margin-bottom:3px}
+  label.q .req{color:var(--danger)}
+  .hint{color:var(--muted);font-size:13px;margin-bottom:7px}
+  input[type=text],input[type=tel],select,textarea{
+    width:100%;background:var(--field);border:1.5px solid var(--field-border);
+    border-radius:12px;padding:12px 14px;font-size:15.5px;color:var(--ink);
+    font-family:inherit;outline:none;transition:border-color .15s, background .15s}
+  input:focus,select:focus,textarea:focus{border-color:var(--blue);background:#fff}
+  textarea{min-height:88px;resize:vertical;line-height:1.5}
+  select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%236b7385' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .chip{border:1.5px solid var(--field-border);background:var(--field);color:var(--ink);
+    border-radius:999px;padding:9px 15px;font-size:14.5px;font-weight:600;cursor:pointer;
+    font-family:inherit;transition:all .12s;user-select:none}
+  .chip:hover{border-color:var(--blue)}
+  .chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+
+  .err{color:var(--danger);font-size:13px;margin-top:5px;display:none}
+  .fgroup.bad .err{display:block}
+  .fgroup.bad input,.fgroup.bad textarea{border-color:var(--danger)}
+
+  .btn{width:100%;background:var(--blue);color:#fff;border:none;border-radius:14px;
+    padding:16px;font-size:16.5px;font-weight:800;letter-spacing:.6px;cursor:pointer;
+    font-family:inherit;margin-top:8px;transition:background .15s, transform .1s;
+    text-transform:uppercase}
+  .btn:hover{background:var(--blue-dark)}
+  .btn:active{transform:scale(.99)}
+  .btn:disabled{opacity:.6;cursor:wait}
+
+  .lock{display:flex;align-items:center;justify-content:center;gap:7px;
+    color:var(--muted);font-size:13px;margin-top:16px}
+  .foot{text-align:center;color:var(--muted);font-size:13px;margin-top:22px}
+  .foot .admin-link{color:#aab2c5;text-decoration:none;font-size:12px;cursor:pointer}
+  .foot .admin-link:hover{color:var(--blue)}
+
+  /* ---- màn hình cảm ơn ---- */
+  .thanks{text-align:center;padding:34px 10px 20px;display:none}
+  .thanks .leaf{font-size:46px}
+  .thanks h2{font-size:23px;font-weight:800;margin:14px 0 8px}
+  .thanks p{color:var(--muted);font-size:15px;line-height:1.6;max-width:420px;margin:0 auto}
+  .thanks .btn{max-width:280px;margin:24px auto 0;display:block}
+
+  /* ---- quản trị ---- */
+  .adminbox{display:none}
+  .pinbox{max-width:340px;margin:0 auto;text-align:center;padding:26px 0 10px}
+  .pinbox input{text-align:center;font-size:22px;letter-spacing:8px;font-weight:700}
+  .abar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .abar .count{font-weight:800;font-size:16px}
+  .abtn{border:1.5px solid var(--field-border);background:#fff;border-radius:10px;
+    padding:9px 15px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .abtn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .abtn:hover{border-color:var(--blue)}
+  .rec{border:1.5px solid var(--field-border);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:#fbfcff}
+  .rec .rt{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .rec .who{font-weight:800;font-size:15.5px}
+  .rec .when{color:var(--muted);font-size:12.5px}
+  .rec .line{font-size:14px;margin-top:5px;line-height:1.5}
+  .rec .line b{color:var(--blue);font-weight:700}
+  .rec .del{color:var(--danger);background:none;border:none;font-size:12.5px;cursor:pointer;font-family:inherit;margin-top:8px;padding:0}
+  .loadmsg{color:var(--muted);font-size:14px;text-align:center;padding:14px}
+  @media (max-width:480px){
+    h1.title{font-size:23px}
+    .card{padding:22px 16px}
+  }
+</style>
+
+<div class="wrap"><div class="inner">
+
+  <!-- ===================== FORM KHÁCH ===================== -->
+  <div id="viewForm">
+    <div class="badge"><span>🕐 Khảo sát nhanh · 1 phút</span></div>
+    <h1 class="title">Cơ thể bạn đang cần gì? <em>Nhẹ lắng nghe.</em></h1>
+    <p class="sub">3 câu hỏi ngắn để Nhẹ hiểu đúng cơ thể bạn đang ở đâu — rồi chăm sóc đúng thứ bạn cần, không lan man.</p>
+
+    <div class="card">
+      <div class="sec">① Bạn là ai</div>
+
+      <div class="fgroup" id="g-name">
+        <label class="q">Họ và tên <span class="req">*</span></label>
+        <input type="text" id="f-name" autocomplete="name" placeholder="Nguyễn Văn A">
+        <div class="err">Vui lòng nhập họ tên</div>
+      </div>
+
+      <div class="row">
+        <div class="fgroup" id="g-phone">
+          <label class="q">Số điện thoại / Zalo <span class="req">*</span></label>
+          <input type="tel" id="f-phone" autocomplete="tel" placeholder="09xx xxx xxx">
+          <div class="err">Vui lòng nhập số điện thoại hợp lệ</div>
+        </div>
+        <div class="fgroup" id="g-job">
+          <label class="q">Công việc của bạn</label>
+          <select id="f-job">
+            <option value="">— Chọn nhanh —</option>
+            <option>Văn phòng, ngồi nhiều</option>
+            <option>Đứng nhiều</option>
+            <option>Lao động tay chân</option>
+            <option>Nội trợ, chăm con nhỏ</option>
+            <option>Khác</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sec" style="margin-top:20px">② Cơ thể bạn đang nói gì</div>
+
+      <div class="fgroup" id="g-areas">
+        <label class="q">Vùng nào đang khó chịu nhất? <span class="req">*</span></label>
+        <div class="hint">Chạm để chọn, có thể chọn nhiều</div>
+        <div class="chips" id="chips"></div>
+        <div class="err">Vui lòng chọn ít nhất một vùng</div>
+      </div>
+
+      <div class="fgroup" id="g-problem">
+        <label class="q">Điều đó đang làm phiền bạn thế nào? <span class="req">*</span></label>
+        <div class="hint">Điều gì đang cản trở giấc ngủ / công việc / khiến bạn khó chịu nhất mỗi ngày?</div>
+        <textarea id="f-problem" placeholder="Ví dụ: đau vai gáy khiến tôi khó ngủ, ngồi làm việc 1 tiếng là mỏi..."></textarea>
+        <div class="err">Vui lòng chia sẻ đôi dòng để Nhẹ hiểu bạn hơn</div>
+      </div>
+
+      <div class="fgroup" id="g-wish">
+        <label class="q">Bạn mong muốn điều gì khi đến Nhẹ? <span class="req">*</span></label>
+        <div class="hint">Kết quả lý tưởng bạn muốn có sau buổi trị liệu là gì?</div>
+        <textarea id="f-wish" placeholder="Ví dụ: ngủ ngon hơn, hết đau lưng, được thư giãn hoàn toàn..."></textarea>
+        <div class="err">Vui lòng cho Nhẹ biết mong muốn của bạn</div>
+      </div>
+
+      <button class="btn" id="btnSend">Gửi khảo sát</button>
+      <div class="lock">🔒 Thông tin của bạn được bảo mật, chỉ dùng để chăm sóc bạn tốt hơn.</div>
+    </div>
+  </div>
+
+  <!-- ===================== CẢM ƠN ===================== -->
+  <div id="viewThanks" class="card thanks">
+    <div class="leaf">🌿</div>
+    <h2>Nhẹ đã nhận được rồi ạ!</h2>
+    <p>Cảm ơn bạn đã tin tưởng chia sẻ. Nhẹ sẽ dựa vào đây để chăm sóc đúng điều cơ thể bạn đang cần.<br><br><b>Đưa màn hình này cho lễ tân để nhận ưu đãi nhé 💆</b></p>
+    <button class="btn" id="btnNew">Khảo sát mới</button>
+  </div>
+
+  <!-- ===================== QUẢN TRỊ ===================== -->
+  <div id="viewAdmin" class="adminbox">
+    <div class="card">
+      <div id="pinArea" class="pinbox">
+        <div class="sec" style="text-align:center">Khu vực quản lý</div>
+        <p class="hint" style="margin-bottom:12px">Nhập mã PIN để xem dữ liệu khảo sát</p>
+        <input type="tel" id="pinInput" maxlength="4" placeholder="••••">
+        <div class="err" id="pinErr" style="display:none;margin-top:8px">Mã PIN chưa đúng</div>
+        <button class="btn" id="btnPin" style="margin-top:16px">Mở khoá</button>
+        <div class="foot" style="margin-top:14px"><a class="admin-link" onclick="showView('form')">← Quay lại form</a></div>
+      </div>
+
+      <div id="dataArea" style="display:none">
+        <div class="abar">
+          <span class="count" id="recCount">0 phản hồi</span>
+          <span style="flex:1"></span>
+          <button class="abtn" id="btnReload">↻ Làm mới</button>
+          <button class="abtn primary" id="btnCsv">⬇ Xuất file Excel (CSV)</button>
+        </div>
+        <div id="recList"></div>
+        <div class="loadmsg" id="loadMsg"></div>
+        <div class="foot"><a class="admin-link" onclick="showView('form')">← Quay lại form</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" id="footMain">
+    Nhẹ Spa · Massage body &amp; Trị liệu &nbsp;·&nbsp;
+    <a class="admin-link" onclick="showView('admin')">Quản trị</a>
+  </div>
+
+</div></div>
+
+<script>
+  var PIN = "6868";
+  var KEY_PREFIX = "nhespa_survey:";
+  var AREAS = ["Cổ – vai – gáy","Thắt lưng","Lưng trên","Đau đầu","Chân, bắp chân mỏi","Mất ngủ","Căng thẳng, stress","Mỏi toàn thân"];
+  var records = [];
+  var unlocked = false;
+
+  /* ---- dựng chips ---- */
+  var chipsEl = document.getElementById("chips");
+  AREAS.forEach(function(a){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = a;
+    b.onclick = function(){ b.classList.toggle("on"); clearBad("g-areas"); };
+    chipsEl.appendChild(b);
+  });
+
+  function $(id){ return document.getElementById(id); }
+  function markBad(id){ $(id).classList.add("bad"); }
+  function clearBad(id){ $(id).classList.remove("bad"); }
+
+  function showView(v){
+    $("viewForm").style.display   = v==="form"   ? "block" : "none";
+    $("viewThanks").style.display = v==="thanks" ? "block" : "none";
+    $("viewAdmin").style.display  = v==="admin"  ? "block" : "none";
+    $("footMain").style.display   = v==="form"   ? "block" : "none";
+    if(v==="admin" && unlocked){ $("pinArea").style.display="none"; $("dataArea").style.display="block"; loadRecords(); }
+    window.scrollTo(0,0);
+  }
+  window.showView = showView;
+
+  /* ---- gửi khảo sát ---- */
+  $("btnSend").onclick = async function(){
+    var name = $("f-name").value.trim();
+    var phone = $("f-phone").value.trim();
+    var job = $("f-job").value;
+    var areas = Array.prototype.slice.call(document.querySelectorAll(".chip.on")).map(function(c){return c.textContent;});
+    var problem = $("f-problem").value.trim();
+    var wish = $("f-wish").value.trim();
+
+    var ok = true;
+    ["g-name","g-phone","g-areas","g-problem","g-wish"].forEach(clearBad);
+    if(!name){ markBad("g-name"); ok=false; }
+    if(!/^[0-9+\s().-]{8,15}$/.test(phone)){ markBad("g-phone"); ok=false; }
+    if(areas.length===0){ markBad("g-areas"); ok=false; }
+    if(!problem){ markBad("g-problem"); ok=false; }
+    if(!wish){ markBad("g-wish"); ok=false; }
+    if(!ok){ return; }
+
+    var btn = this; btn.disabled = true; btn.textContent = "Đang gửi...";
+    var rec = { ts: Date.now(), name:name, phone:phone, job:job, areas:areas, problem:problem, wish:wish };
+    var key = KEY_PREFIX + rec.ts + "_" + Math.random().toString(36).slice(2,7);
+    try{
+      var res = await window.storage.set(key, JSON.stringify(rec), true);
+      if(!res){ throw new Error("no result"); }
+      showView("thanks");
+    }catch(e){
+      alert("Chưa gửi được, vui lòng thử lại hoặc báo lễ tân giúp Nhẹ nhé.");
+    }
+    btn.disabled = false; btn.textContent = "Gửi khảo sát";
+  };
+
+  /* ---- khảo sát mới (reset cho khách tiếp theo) ---- */
+  $("btnNew").onclick = function(){
+    ["f-name","f-phone","f-problem","f-wish"].forEach(function(id){ $(id).value=""; });
+    $("f-job").value = "";
+    document.querySelectorAll(".chip.on").forEach(function(c){ c.classList.remove("on"); });
+    showView("form");
+  };
+
+  /* ---- PIN ---- */
+  function tryPin(){
+    if($("pinInput").value === PIN){
+      unlocked = true; $("pinErr").style.display="none"; $("pinInput").value="";
+      $("pinArea").style.display="none"; $("dataArea").style.display="block";
+      loadRecords();
+    } else {
+      $("pinErr").style.display="block";
+    }
+  }
+  $("btnPin").onclick = tryPin;
+  $("pinInput").addEventListener("keydown", function(e){ if(e.key==="Enter") tryPin(); });
+
+  /* ---- tải dữ liệu (hiển thị dần) ---- */
+  async function loadRecords(){
+    var list = $("recList"), msg = $("loadMsg");
+    list.innerHTML = ""; records = [];
+    msg.textContent = "Đang tải dữ liệu...";
+    $("recCount").textContent = "…";
+    var keys = [];
+    try{
+      var r = await window.storage.list(KEY_PREFIX, true);
+      keys = (r && r.keys) ? r.keys : [];
+    }catch(e){ keys = []; }
+    keys = keys.map(function(k){ return (typeof k==="string") ? k : (k && k.key ? k.key : ""); })
+               .filter(Boolean)
+               .sort().reverse(); /* mới nhất lên đầu (key bắt đầu bằng timestamp) */
+    if(keys.length===0){
+      msg.textContent = "Chưa có phản hồi nào. Khi khách gửi khảo sát, dữ liệu sẽ hiện ở đây.";
+      $("recCount").textContent = "0 phản hồi";
+      return;
+    }
+    for(var i=0;i<keys.length;i++){
+      try{
+        var g = await window.storage.get(keys[i], true);
+        if(g && g.value){
+          var rec = JSON.parse(g.value);
+          rec._key = keys[i];
+          records.push(rec);
+          list.appendChild(renderRec(rec));
+          $("recCount").textContent = records.length + " phản hồi";
+          msg.textContent = (i < keys.length-1) ? ("Đang tải... " + (i+1) + "/" + keys.length) : "";
+        }
+      }catch(e){ /* bỏ qua bản ghi lỗi */ }
+    }
+    msg.textContent = "";
+    $("recCount").textContent = records.length + " phản hồi";
+  }
+  $("btnReload").onclick = loadRecords;
+
+  function fmtTime(ts){
+    var d = new Date(ts);
+    function p(n){ return (n<10?"0":"")+n; }
+    return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear()+" "+p(d.getHours())+":"+p(d.getMinutes());
+  }
+  function esc(s){ var d=document.createElement("div"); d.textContent=s==null?"":String(s); return d.innerHTML; }
+
+  function renderRec(rec){
+    var el = document.createElement("div"); el.className="rec";
+    el.innerHTML =
+      '<div class="rt"><span class="who">'+esc(rec.name)+' · '+esc(rec.phone)+'</span>'+
+      '<span class="when">'+fmtTime(rec.ts)+'</span></div>'+
+      (rec.job ? '<div class="line"><b>Công việc:</b> '+esc(rec.job)+'</div>' : '')+
+      '<div class="line"><b>Vùng khó chịu:</b> '+esc((rec.areas||[]).join(", "))+'</div>'+
+      '<div class="line"><b>Vấn đề:</b> '+esc(rec.problem)+'</div>'+
+      '<div class="line"><b>Mong muốn:</b> '+esc(rec.wish)+'</div>';
+    var del = document.createElement("button");
+    del.className="del"; del.textContent="Xoá phản hồi này";
+    del.onclick = async function(){
+      if(!confirm("Xoá phản hồi của "+rec.name+"?")) return;
+      try{
+        await window.storage.delete(rec._key, true);
+        records = records.filter(function(r){ return r._key!==rec._key; });
+        el.remove();
+        $("recCount").textContent = records.length + " phản hồi";
+      }catch(e){ alert("Chưa xoá được, thử lại nhé."); }
+    };
+    el.appendChild(del);
+    return el;
+  }
+
+  /* ---- xuất CSV (mở được bằng Excel) ---- */
+  $("btnCsv").onclick = function(){
+    if(records.length===0){ alert("Chưa có dữ liệu để xuất."); return; }
+    function q(s){ return '"' + String(s==null?"":s).replace(/"/g,'""') + '"'; }
+    var rows = [["Thời gian","Họ tên","SĐT/Zalo","Công việc","Vùng khó chịu","Vấn đề đang gặp","Mong muốn"]];
+    records.forEach(function(r){
+      rows.push([fmtTime(r.ts), r.name, r.phone, r.job||"", (r.areas||[]).join("; "), r.problem, r.wish]);
+    });
+    var csv = "\uFEFF" + rows.map(function(row){ return row.map(q).join(","); }).join("\r\n");
+    var blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    var a = document.createElement("a");
+    var d = new Date(); function p(n){return (n<10?"0":"")+n;}
+    a.href = URL.createObjectURL(blob);
+    a.download = "nhe-spa-khao-sat_"+d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+".csv";
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  };
+</script>
